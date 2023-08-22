@@ -53,7 +53,7 @@ def main():
     )    
     mridir = f'../../mrifeat/{subject}/'
     featdir = '../../nsdfeat/subjfeat/'
-    savedir = f'../..//decoded/{subject}/'
+    savedir = f'../../decoded/{subject}/'
     os.makedirs(savedir, exist_ok=True)
 
     X = []

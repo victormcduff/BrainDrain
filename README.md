@@ -1,5 +1,4 @@
 # High-resolution image reconstruction with latent diffusion models from human brain activity
-HA
 Takagi and Nishimoto, CVPR 2023
 
 [[Paper](https://www.biorxiv.org/content/10.1101/2022.11.18.517004v3)]

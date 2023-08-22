@@ -308,6 +308,8 @@ class NSDAccess(object):
         behavior = pd.read_csv(self.behavior_file.format(
             subject=subject), delimiter='\t')
 
+        #print(behavior)
+
         # the behavior is encoded per run.
         # I'm now setting this function up so that it aligns with the timepoints in the fmri files,
         # i.e. using indexing per session, and not using the 'run' information.

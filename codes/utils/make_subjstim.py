@@ -16,7 +16,7 @@ def main():
     parser.add_argument(
         "--use_stim",
         type=str,
-        default='',
+        default='each',
         help="ave or each",
     )
     parser.add_argument(
@@ -30,11 +30,11 @@ def main():
     subject=opt.subject
     use_stim = opt.use_stim
     featname = opt.featname
-    topdir = '../../nsdfeat/'
+    topdir = '../../nsdfeat'
     savedir = f'{topdir}/subjfeat/'
-    featdir = f'{topdir}/{featname}/'
+    featdir = f'{topdir}/{featname}'
 
-    nsd_expdesign = scipy.io.loadmat('../../nsd/nsddata/experiments/nsd/nsd_expdesign.mat')
+    nsd_expdesign = scipy.io.loadmat('../../nsd/nsd_expdesign.mat')
 
     # Note that most of them are 1-base index!
     # This is why I subtract 1
@@ -64,8 +64,8 @@ def main():
     feats_te = feats[tr_idx==0,:]
     np.save(f'../../mrifeat/{subject}/{subject}_stims_tridx.npy',tr_idx)
 
-    np.save(f'{savedir}/{subject}_{use_stim}_{featname}_tr.npy',feats_tr)
-    np.save(f'{savedir}/{subject}_{use_stim}_{featname}_te.npy',feats_te)
+    np.save(f'{savedir}{subject}_{use_stim}_{featname}_tr.npy',feats_tr)
+    np.save(f'{savedir}{subject}_{use_stim}_{featname}_te.npy',feats_te)
 
 
 if __name__ == "__main__":

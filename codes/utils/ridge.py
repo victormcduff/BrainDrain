@@ -6,6 +6,21 @@ from himalaya.scoring import correlation_score
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+
+def check_partial_latents(array_x, array_y, target):
+    partial_image = np.zeros(len(np.load(f'../../nsdfeat/{target}/000000.npy')))
+
+    x_partial = []
+    y_partial = []
+
+    for i in range(len(array_y)):
+        image = array_y[i]
+        if image.all() != partial_image.all():
+            x_partial.append(array_x[i])
+            y_partial.append(image)
+
+    return np.asarray(x_partial), np.asarray(y_partial)
+
 def main():
 
     parser = argparse.ArgumentParser()
@@ -34,7 +49,7 @@ def main():
     target = opt.target
     roi = opt.roi
 
-    backend = set_backend("numpy", on_error="warn")
+    backend = set_backend("numpy", on_error="warn") #"torch_cuda" / "cupy" --for gpu
     subject=opt.subject
 
     if target == 'c' or target == 'init_latent': # CVPR
@@ -47,10 +62,12 @@ def main():
     preprocess_pipeline = make_pipeline(
         StandardScaler(with_mean=True, with_std=True),
     )
+
     pipeline = make_pipeline(
         preprocess_pipeline,
         ridge,
-    )    
+    )   
+
     mridir = f'../../mrifeat/{subject}/'
     featdir = '../../nsdfeat/subjfeat/'
     savedir = f'../../decoded/{subject}/'
@@ -68,9 +85,24 @@ def main():
         X_te.append(cX_te)
     X = np.hstack(X)
     X_te = np.hstack(X_te)
+
+    Y = np.load(f'{featdir}/{subject}_each_{target}_tr.npy').astype("float32")#.reshape([X.shape[0],-1])
+    Y_te = np.load(f'{featdir}/{subject}_ave_{target}_te.npy').astype("float32")#.reshape([X.shape[0],-1])
+
+    print('shape of X, our betas to come: ', X.shape) 
+    print('shape of Y, the image array: ', Y.shape)
+
+    X, Y = check_partial_latents(X, Y, target)
+    X_te, Y_te = check_partial_latents(X_te, Y_te, target)
+
+    print('shape of X after rooting out incomplete latents: ', X.shape) 
+    print('shape of new Y: ', Y.shape)
+
+    #Y = Y.reshape([X.shape[0],-1])
+    #Y_te = Y_te.reshape([X.shape[0],-1])
     
-    Y = np.load(f'{featdir}/{subject}_each_{target}_tr.npy').astype("float32").reshape([X.shape[0],-1])
-    Y_te = np.load(f'{featdir}/{subject}_ave_{target}_te.npy').astype("float32").reshape([X_te.shape[0],-1])
+    #Y = np.load(f'{featdir}/{subject}_each_{target}_tr.npy').astype("float32").reshape([X.shape[0],-1])
+    #Y_te = np.load(f'{featdir}/{subject}_ave_{target}_te.npy').astype("float32").reshape([X_te.shape[0],-1])
     
     print(f'Now making decoding model for... {subject}:  {roi}, {target}')
     print(f'X {X.shape}, Y {Y.shape}, X_te {X_te.shape}, Y_te {Y_te.shape}')

@@ -1,4 +1,5 @@
 import argparse, os
+import sys
 import PIL
 import torch
 import numpy as np
@@ -10,9 +11,17 @@ from contextlib import nullcontext
 from pytorch_lightning import seed_everything
 from nsd_access import NSDAccess
 from PIL import Image
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent + '/diffusion_sd1/stable-diffusion')
+
+#print(sys.path)
+#import ldm
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
+path_to_data = '/data/ArkadiyArchive/Brain/NSA'
 
 def load_model_from_config(config, ckpt, gpu, verbose=False):
     print(f"Loading model from {ckpt}")
@@ -28,7 +37,7 @@ def load_model_from_config(config, ckpt, gpu, verbose=False):
     if len(u) > 0 and verbose:
         print("unexpected keys:")
         print(u)
-    model.cuda(f"cuda:{gpu}")
+    model.cuda()#f"cuda:{gpu}")
     model.eval()
     return model
 
@@ -65,9 +74,12 @@ def main():
         help="the seed (for reproducible sampling)",
     )
 
-    # Set Parameters
+    print('initialising parameters')
     opt = parser.parse_args()
+
     seed_everything(opt.seed)
+    #generator = torch.Generator(device="cuda").manual_seed(opt.seed)
+
     imgidx = opt.imgidx
     gpu = opt.gpu
     resolution = 320
@@ -76,19 +88,21 @@ def main():
     ddim_eta = 0.0
     strength = 0.8
     scale = 5.0
-    nsda = NSDAccess('../../nsd/')
+    nsda = NSDAccess(path_to_data)
     config = '../diffusion_sd1/stable-diffusion/configs/stable-diffusion/v1-inference.yaml'
     ckpt = '../diffusion_sd1/stable-diffusion/models/ldm/stable-diffusion-v1/sd-v1-4.ckpt'
     config = OmegaConf.load(f"{config}")
-    torch.cuda.set_device(gpu)
+    #torch.cuda.set_device(gpu)
+
     os.makedirs(f'../../nsdfeat/init_latent/', exist_ok=True)
     os.makedirs(f'../../nsdfeat/c/', exist_ok=True)
 
-    # Load moodels
+
+    print('loading SD 1.4')
     precision = 'autocast'
     precision_scope = autocast if precision == "autocast" else nullcontext
-    model = load_model_from_config(config, f"{ckpt}", gpu)
-    device = torch.device(f"cuda:{gpu}") if torch.cuda.is_available() else torch.device("cpu")
+    model = load_model_from_config(config, ckpt, gpu)
+    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
     sampler = DDIMSampler(model)
     sampler.make_schedule(ddim_num_steps=ddim_steps, ddim_eta=ddim_eta, verbose=False)
@@ -96,7 +110,8 @@ def main():
     t_enc = int(strength * ddim_steps)
     print(f"target t_enc is {t_enc} steps")
 
-    # Sample
+
+    print('starting image sampling')
     for s in tqdm(range(imgidx[0],imgidx[1])):
         print(f"Now processing image {s:06}")
         prompt = []

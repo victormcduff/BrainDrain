@@ -1,5 +1,5 @@
 # High-resolution image reconstruction with latent diffusion models from human brain activity
-Takagi and Nishimoto, CVPR 2023
+Based on the work by Takagi and Nishimoto, CVPR 2023
 
 [[Paper](https://www.biorxiv.org/content/10.1101/2022.11.18.517004v3)]
 [[Technical Paper](https://arxiv.org/abs/2306.11536)]
@@ -8,7 +8,7 @@ Takagi and Nishimoto, CVPR 2023
 [[FAQ(Japanese)](https://sites.google.com/view/stablediffusion-with-brain/faq_jp)]
 
 # General Information
-This is a repository for reproducing the method we presented (Takagi and Nishimoto, CVPR 2023) for visual experience reconstruction from brain activity using Stable Diffusion.
+This is based on the repository for reproducing the method presented by Takagi and Nishimoto, CVPR 2023, for visual experience reconstruction from brain activity using Stable Diffusion.
 
 <p align="center">
 <img src=/visual_summary.jpg />

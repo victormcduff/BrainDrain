@@ -18,6 +18,8 @@ from nsd_access.nsda import NSDAccess
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
+path_to_data = '/data/ArkadiyArchive/Brain/NSA'
+
 def load_model_from_config(config, ckpt, gpu, verbose=False):
     print(f"Loading model from {ckpt}")
     pl_sd = torch.load(ckpt, map_location="cpu")
@@ -32,7 +34,7 @@ def load_model_from_config(config, ckpt, gpu, verbose=False):
     if len(u) > 0 and verbose:
         print("unexpected keys:")
         print(u)
-    model.cuda(f"cuda:{gpu}")
+    model.cuda() #f"cuda:{gpu}")
     model.eval()
     return model
 
@@ -92,18 +94,17 @@ def main():
     captdir = f'../../decoded/{subject}/captions/'
 
     # Load NSD information
-    nsd_expdesign = scipy.io.loadmat('../../nsd/nsddata/experiments/nsd/nsd_expdesign.mat')
+    nsd_expdesign = scipy.io.loadmat('../../nsd/nsd_expdesign.mat')
 
     # Note that mos of them are 1-base index!
     # This is why I subtract 1
     sharedix = nsd_expdesign['sharedix'] -1 
 
-    nsda = NSDAccess('../../nsd/')
+    nsda = NSDAccess(path_to_data)
     sf = h5py.File(nsda.stimuli_file, 'r')
     sdataset = sf.get('imgBrick')
 
     stims_ave = np.load(f'../../mrifeat/{subject}/{subject}_stims_ave.npy')
-
 
     tr_idx = np.zeros_like(stims_ave)
     for idx, s in enumerate(stims_ave):

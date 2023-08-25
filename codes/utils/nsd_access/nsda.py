@@ -340,7 +340,7 @@ class NSDAccess(object):
             self.stim_descriptions = pd.read_csv(
                 self.stimuli_description_file, index_col=0)
 
-        sf = h5py.File(self.stimuli_file, 'r')
+        sf = h5py.File(self.stimuli_file, 'r') #load 40GB into RAM??? Are you mad??
         sdataset = sf.get('imgBrick')
         if show:
             f, ss = plt.subplots(1, len(image_index),

@@ -52,8 +52,13 @@ def main():
         if s in sharedix:
             tr_idx[idx] = 0
         else:
-            tr_idx[idx] = 1    
-        feat = np.load(f'{featdir}/{s:06}.npy')
+            tr_idx[idx] = 1
+
+        if os.path.exists(f'{featdir}/{s:06}.npy'): #if we have partial latents
+            feat = np.load(f'{featdir}/{s:06}.npy')
+        else:
+            feat = np.zeros(len(np.load(f'{featdir}/000000.npy'))) #empty beast
+
         feats.append(feat)
 
     feats = np.stack(feats)    

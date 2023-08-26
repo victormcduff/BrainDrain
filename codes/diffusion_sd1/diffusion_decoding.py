@@ -13,8 +13,14 @@ from torch import autocast
 from contextlib import nullcontext
 from pytorch_lightning import seed_everything
 import sys
+
 sys.path.append("../utils/")
 from nsd_access.nsda import NSDAccess
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent + '/diffusion_sd1/stable-diffusion')
+
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
@@ -117,7 +123,7 @@ def main():
     config = './stable-diffusion/configs/stable-diffusion/v1-inference.yaml'
     ckpt = './stable-diffusion/models/ldm/stable-diffusion-v1/sd-v1-4.ckpt'
     config = OmegaConf.load(f"{config}")
-    torch.cuda.set_device(gpu)
+    #torch.cuda.set_device(gpu)
     model = load_model_from_config(config, f"{ckpt}", gpu)
 
     n_samples = 1
@@ -125,7 +131,7 @@ def main():
     ddim_eta = 0.0
     strength = 0.8
     scale = 5.0
-    n_iter = 5
+    n_iter = 3
     precision = 'autocast'
     precision_scope = autocast if precision == "autocast" else nullcontext
     batch_size = n_samples
@@ -137,7 +143,7 @@ def main():
     sample_path = os.path.join(outdir, f"samples")
     os.makedirs(sample_path, exist_ok=True)
     precision = 'autocast'
-    device = torch.device(f"cuda:{gpu}") if torch.cuda.is_available() else torch.device("cpu")
+    #device = torch.device(f"cuda:{gpu}") if torch.cuda.is_available() else torch.device("cpu")
     model = model.to(device)
     sampler = DDIMSampler(model)
 
@@ -168,6 +174,10 @@ def main():
 
                     for x_sample in x_samples:
                         x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
+
+                    Image.fromarray(x_sample.astype(np.uint8)).save(
+                        os.path.join(sample_path, f"{imgidx:05}_only_z.png")) #save only z image
+
         im = Image.fromarray(x_sample.astype(np.uint8)).resize((512,512))
         im = np.array(im)
 
@@ -185,6 +195,7 @@ def main():
         scores_c = np.load(f'../../decoded/{subject}/{subject}_{roi_c}_scores_c.npy')
         carr = scores_c[imgidx,:].reshape(77,768)
         c = torch.Tensor(carr).unsqueeze(0).to('cuda')
+
     elif method in ['text','gan']:
         captions = pd.read_csv(f'{captdir}/captions_brain.csv', sep='\t',header=None)
         c = model.get_learned_conditioning(captions.iloc[imgidx][0]).to('cuda')

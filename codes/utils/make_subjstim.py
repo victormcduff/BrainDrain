@@ -46,6 +46,7 @@ def main():
         stims = np.load(f'../../mrifeat/{subject}/{subject}_stims.npy')
     
     feats = []
+    empty_beasts = 0
     tr_idx = np.zeros(len(stims))
 
     for idx, s in tqdm(enumerate(stims)): 
@@ -58,12 +59,15 @@ def main():
             feat = np.load(f'{featdir}/{s:06}.npy')
         else:
             feat = np.zeros(len(np.load(f'{featdir}/000000.npy'))) #empty beast
+            empty_beasts += 1
 
         feats.append(feat)
 
     feats = np.stack(feats)    
 
     os.makedirs(savedir, exist_ok=True)
+
+    print('Missing latents: ', empty_beasts)
 
     feats_tr = feats[tr_idx==1,:]
     feats_te = feats[tr_idx==0,:]

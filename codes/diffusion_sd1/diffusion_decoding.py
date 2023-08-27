@@ -131,7 +131,7 @@ def main():
     ddim_eta = 0.0
     strength = 0.8
     scale = 5.0
-    n_iter = 3
+    n_iter = 1
     precision = 'autocast'
     precision_scope = autocast if precision == "autocast" else nullcontext
     batch_size = n_samples
@@ -161,7 +161,7 @@ def main():
     
     if method in ['cvpr','text']:
         roi_latent = 'early'
-        scores_latent = np.load(f'../../decoded/{subject}/{subject}_{roi_latent}_scores_init_latent.npy')
+        scores_latent = np.load(f'../../decoded/{subject}/{subject}_{roi_latent}_scores_init_latent_torch.npy')
         imgarr = torch.Tensor(scores_latent[imgidx,:].reshape(4,40,40)).unsqueeze(0).to('cuda')
 
         # Generate image from Z
@@ -175,10 +175,11 @@ def main():
                     for x_sample in x_samples:
                         x_sample = 255. * rearrange(x_sample.cpu().numpy(), 'c h w -> h w c')
 
-                    Image.fromarray(x_sample.astype(np.uint8)).save(
-                        os.path.join(sample_path, f"{imgidx:05}_only_z.png")) #save only z image
+                    #Image.fromarray(x_sample.astype(np.uint8)).save(
+                    #    os.path.join(sample_path, f"{imgidx:05}_only_z.png")) #save only z image
 
         im = Image.fromarray(x_sample.astype(np.uint8)).resize((512,512))
+        im.save(os.path.join(sample_path, f"{imgidx:05}_only_z.png"))
         im = np.array(im)
 
     elif method == 'gan':

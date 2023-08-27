@@ -6,7 +6,8 @@ from himalaya.scoring import correlation_score
 from himalaya.progress_bar import ProgressBar
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
-
+import torch
+from torch import nn
 
 def check_partial_latents(array_x, array_y, target):
     partial_image = np.zeros(len(np.load(f'../../nsdfeat/{target}/000000.npy')))
@@ -51,7 +52,7 @@ def main():
     roi = opt.roi
 
     #torch cuda for GPU; I'd be insane to ran this on CPU
-    backend = set_backend("numpy", on_error="warn")#"torch_cuda") 
+    backend = set_backend("torch_cuda")#"numpy", on_error="warn")#"torch_cuda") 
     subject=opt.subject
 
     if target == 'c' or target == 'init_latent': # CVPR
@@ -117,8 +118,16 @@ def main():
     print('Save the scores')
     np.save(f'{savedir}/{subject}_{"_".join(roi)}_scores_{target}.npy',scores)
 
-    print('Evaluating correlation score')
-    rs = correlation_score(Y_te.T,scores.T)
+    scores_np = np.load(f'{savedir}/{subject}_{"_".join(roi)}_scores_{target}.npy').astype("float32")
+    scores_tensor = torch.tensor(scores, dtype=torch.float32).to("cuda")
+    Y_te = torch.tensor(Y_te, dtype=torch.float32).to("cuda")
+
+    loss_function = nn.MSELoss()
+    accuracy = loss_function(scores_tensor, Y_te)
+    print(f'Model accuracy: {accuracy}')
+
+    #print('Evaluating correlation score')
+    #rs = correlation_score(Y_te.T,scores.T)
 
     
     #print(f'Prediction accuracy is: {np.mean(rs, dtype=torch.dtype):3.3}')

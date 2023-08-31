@@ -5,7 +5,8 @@ import pandas as pd
 from nsd_access import NSDAccess
 import scipy.io
 
-path_to_data = '/data/ArkadiyArchive/Brain/NSA'
+path_to_disk = '/data/ArkadiyArchive/Brain/'
+path_to_data = path_to_disk + 'NSA'
 atlasname = 'streams'
 
 def prepare():
@@ -38,23 +39,36 @@ def prepare():
         help="number of sessions to load into RAM at once",
     )
 
+    parser.add_argument(
+        "--flat_brains",
+        type=int,
+        default=0,
+        help="0 or 1, use flat brains or not",
+    )
+
+
     opt = parser.parse_args()
     subject = opt.subject
     batch = opt.batch
+    flat_brains = opt.flat_brains
     session_start = opt.session_start
     session_end = opt.session_end
     sessions = session_end - session_start
+
+    truncated_directory = 'roi_truncated_volume_arrays'
+    if flat_brains:
+        truncated_directory = 'roi_truncated_arrays'
     
     nsda = NSDAccess(path_to_data)
     nsd_expdesign = scipy.io.loadmat('../../nsd/nsd_expdesign.mat')
 
-    savedir = f'../../mrifeat/{subject}/'
+    savedir = f'{path_to_disk}/mrifeat/{subject}/'
     os.makedirs(savedir, exist_ok=True)
-    os.makedirs(f"{savedir}/roi_truncated_arrays/", exist_ok=True)
+    os.makedirs(f"{savedir}/{truncated_directory}/", exist_ok=True)
 
     # Note that most of nsd_expdesign indices are 1-base index!
     # This is why subtracting 1
-    sharedix = nsd_expdesign['sharedix']-1 
+    sharedix = nsd_expdesign['sharedix']-1
     
     print('making BEHAVIOUR')
     behs = pd.DataFrame()
@@ -79,10 +93,10 @@ def prepare():
 
     print('batches: ', batches-1)
 
-    return batches, batch, stims_all, stims_unique, subject, savedir, atlas, nsda, sharedix
+    return batches, batch, stims_all, stims_unique, subject, savedir, atlas, nsda, sharedix, flat_brains, truncated_directory
 
 
-def truncate_full_scans(batches, batch, subject, savedir, atlas, nsda):
+def truncate_full_scans(batches, batch, subject, savedir, atlas, nsda, flat_brains, truncated_directory):
     for i in range(1, batches):
         print('beta batch', i)
         betas_all = [] #clearing memory 
@@ -109,14 +123,18 @@ def truncate_full_scans(batches, batch, subject, savedir, atlas, nsda):
                 print('SKIP')
                 continue
             else:
-                betas_roi = betas_all[:,atlas[0].transpose([2,1,0])==val]
+                if flat_brains:
+                    betas_roi = betas_all[:,atlas[0].transpose([2,1,0])==val]
+                else: #ATLAS AXIS 0 AND 2 ARE INVERTED!!!
+                    b_k, b_j, b_i = np.where(atlas[0] == val) #the limits of our magic box with BRAINS
+                    betas_roi = betas_all[:,min(b_i):max(b_i),min(b_j):max(b_j),min(b_k):max(b_k)] 
 
             print('betas ROI shape:', betas_roi.shape)
 
-            np.save(f'{savedir}/roi_truncated_arrays/{subject}_{roi}_betas_batch_{i}.npy',betas_roi)
+            np.save(f'{savedir}/{truncated_directory}/{subject}_{roi}_betas_batch_{i}.npy',betas_roi)
 
 
-def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas, sharedix):
+def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas, sharedix, flat_brains, truncated_directory):
     print('start preparing TEST/TRAIN data')
     for roi,val in atlas[1].items():
         #betas_roi = [] #memory clearing
@@ -128,7 +146,7 @@ def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas
         
             #load all batches for this ROI
             for i in range(1,batches):
-                betas_load_batch = np.load(f'{savedir}roi_truncated_arrays/{subject}_{roi}_betas_batch_{i}.npy')
+                betas_load_batch = np.load(f'{savedir}/{truncated_directory}/{subject}_{roi}_betas_batch_{i}.npy')
                 
                 if i==1:
                     betas_roi = betas_load_batch
@@ -139,7 +157,7 @@ def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas
 
             betas_roi_ave = []
             for stim in stims_unique:
-                stim_mean = np.mean(betas_roi[stims_all == stim,:],axis=0)
+                stim_mean = np.mean(betas_roi[stims_all == stim],axis=0)
                 betas_roi_ave.append(stim_mean)
             betas_roi_ave = np.stack(betas_roi_ave)
             print('beta roi average size: ', betas_roi_ave.shape)
@@ -152,9 +170,9 @@ def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas
             print('start splitting into train and test for this ROI')
             for idx,stim in enumerate(stims_all):
                 if stim in sharedix:
-                    betas_te.append(betas_roi[idx,:])
+                    betas_te.append(betas_roi[idx])
                 else:
-                    betas_tr.append(betas_roi[idx,:])
+                    betas_tr.append(betas_roi[idx])
 
             betas_tr = np.stack(betas_tr)
             betas_te = np.stack(betas_te)
@@ -163,23 +181,28 @@ def prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas
             betas_ave_te = []
             for idx,stim in enumerate(stims_unique):
                 if stim in sharedix:
-                    betas_ave_te.append(betas_roi_ave[idx,:])
+                    betas_ave_te.append(betas_roi_ave[idx])
                 else:
-                    betas_ave_tr.append(betas_roi_ave[idx,:])
+                    betas_ave_tr.append(betas_roi_ave[idx])
             betas_ave_tr = np.stack(betas_ave_tr)
             betas_ave_te = np.stack(betas_ave_te)
 
             print('Saving train/test for this ROI')
-            np.save(f'{savedir}/{subject}_{roi}_betas_tr.npy',betas_tr)
-            np.save(f'{savedir}/{subject}_{roi}_betas_te.npy',betas_te)
-            np.save(f'{savedir}/{subject}_{roi}_betas_ave_tr.npy',betas_ave_tr)
-            np.save(f'{savedir}/{subject}_{roi}_betas_ave_te.npy',betas_ave_te)
+
+            volume_add = 'tensor'
+            if flat_brains:
+                volume_add = ''
+
+            np.save(f'{savedir}/{subject}_{roi}_{volume_add}betas_tr.npy',betas_tr)
+            np.save(f'{savedir}/{subject}_{roi}_{volume_add}betas_te.npy',betas_te)
+            np.save(f'{savedir}/{subject}_{roi}_{volume_add}betas_ave_tr.npy',betas_ave_tr)
+            np.save(f'{savedir}/{subject}_{roi}_{volume_add}betas_ave_te.npy',betas_ave_te)
 
 
 def main(): #awful awful AWFUL way of doing this whole thing, will redo it later
-    batches, batch, stims_all, stims_unique, subject, savedir, atlas, nsda, sharedix = prepare()
-    truncate_full_scans(batches, batch, subject, savedir, atlas, nsda) #comment this if already have truncated files
-    prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas, sharedix)
+    batches, batch, stims_all, stims_unique, subject, savedir, atlas, nsda, sharedix, flat_brains, truncated_directory = prepare()
+    truncate_full_scans(batches, batch, subject, savedir, atlas, nsda, flat_brains, truncated_directory) #comment this if already have truncated files
+    prepare_train_data(batches, stims_all, stims_unique, subject, savedir, atlas, sharedix, flat_brains, truncated_directory)
 
 
 if __name__ == "__main__":

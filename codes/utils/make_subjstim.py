@@ -4,6 +4,9 @@ from tqdm import tqdm
 import argparse
 import os
 
+path_to_disk = '/data/ArkadiyArchive/Brain/'
+path_to_data = path_to_disk + 'NSA'
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -30,7 +33,7 @@ def main():
     subject=opt.subject
     use_stim = opt.use_stim
     featname = opt.featname
-    topdir = '../../nsdfeat'
+    topdir = f'{path_to_disk}/nsdfeat'
     savedir = f'{topdir}/subjfeat/'
     featdir = f'{topdir}/{featname}'
 
@@ -41,9 +44,9 @@ def main():
     sharedix = nsd_expdesign['sharedix'] -1 
 
     if use_stim == 'ave':
-        stims = np.load(f'../../mrifeat/{subject}/{subject}_stims_ave.npy')
+        stims = np.load(f'{path_to_disk}/mrifeat/{subject}/{subject}_stims_ave.npy')
     else: # Each
-        stims = np.load(f'../../mrifeat/{subject}/{subject}_stims.npy')
+        stims = np.load(f'{path_to_disk}/mrifeat/{subject}/{subject}_stims.npy')
     
     feats = []
     empty_beasts = 0
@@ -71,7 +74,7 @@ def main():
 
     feats_tr = feats[tr_idx==1,:]
     feats_te = feats[tr_idx==0,:]
-    np.save(f'../../mrifeat/{subject}/{subject}_stims_tridx.npy',tr_idx)
+    np.save(f'{path_to_disk}/mrifeat/{subject}/{subject}_stims_tridx.npy',tr_idx)
 
     np.save(f'{savedir}{subject}_{use_stim}_{featname}_tr.npy',feats_tr)
     np.save(f'{savedir}{subject}_{use_stim}_{featname}_te.npy',feats_te)

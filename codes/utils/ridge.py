@@ -52,7 +52,7 @@ def main():
     roi = opt.roi
 
     #torch cuda for GPU; I'd be insane to ran this on CPU
-    backend = set_backend("torch_cuda")#"numpy", on_error="warn")#"torch_cuda") 
+    backend = set_backend("numpy", on_error="warn")#"torch_cuda") 
     subject=opt.subject
 
     if target == 'c' or target == 'init_latent': # CVPR

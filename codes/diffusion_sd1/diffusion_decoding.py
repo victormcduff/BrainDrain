@@ -24,6 +24,7 @@ sys.path.append(parent + '/diffusion_sd1/stable-diffusion')
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
 
+path_to_disk = '/data/ArkadiyArchive/Brain/'
 path_to_data = '/data/ArkadiyArchive/Brain/NSA'
 
 def load_model_from_config(config, ckpt, gpu, verbose=False):
@@ -96,8 +97,8 @@ def main():
     gpu = opt.gpu
     method = opt.method
     subject=opt.subject
-    gandir = f'../../decoded/gan_recon_img/all_layers/{subject}/streams/'
-    captdir = f'../../decoded/{subject}/captions/'
+    gandir = f'{path_to_disk}/decoded/gan_recon_img/all_layers/{subject}/streams/'
+    captdir = f'{path_to_disk}/decoded/{subject}/captions/'
 
     # Load NSD information
     nsd_expdesign = scipy.io.loadmat('../../nsd/nsd_expdesign.mat')
@@ -110,7 +111,7 @@ def main():
     sf = h5py.File(nsda.stimuli_file, 'r')
     sdataset = sf.get('imgBrick')
 
-    stims_ave = np.load(f'../../mrifeat/{subject}/{subject}_stims_ave.npy')
+    stims_ave = np.load(f'{path_to_disk}/mrifeat/{subject}/{subject}_stims_ave.npy')
 
     tr_idx = np.zeros_like(stims_ave)
     for idx, s in enumerate(stims_ave):
@@ -131,7 +132,7 @@ def main():
     ddim_eta = 0.0
     strength = 0.8
     scale = 5.0
-    n_iter = 1
+    n_iter = 3
     precision = 'autocast'
     precision_scope = autocast if precision == "autocast" else nullcontext
     batch_size = n_samples
@@ -161,7 +162,8 @@ def main():
     
     if method in ['cvpr','text']:
         roi_latent = 'early'
-        scores_latent = np.load(f'../../decoded/{subject}/{subject}_{roi_latent}_scores_init_latent_torch.npy')
+        #scores_latent = np.load(f'{path_to_disk}/decoded/{subject}/{subject}_{roi_latent}_scores_init_latent_torch.npy')
+        scores_latent = np.load(f'{path_to_disk}/decoded/{subject}/{subject}_early_scores_init_latent_torch_vol.npy')
         imgarr = torch.Tensor(scores_latent[imgidx,:].reshape(4,40,40)).unsqueeze(0).to('cuda')
 
         # Generate image from Z
@@ -193,13 +195,15 @@ def main():
     # Load c (Semantics)
     if method == 'cvpr':
         roi_c = 'ventral'
-        scores_c = np.load(f'../../decoded/{subject}/{subject}_{roi_c}_scores_c.npy')
+        scores_c = np.load(f'../../decoded/{subject}/{subject}_{roi_c}_scores_c_torch.npy')
         carr = scores_c[imgidx,:].reshape(77,768)
         c = torch.Tensor(carr).unsqueeze(0).to('cuda')
 
     elif method in ['text','gan']:
         captions = pd.read_csv(f'{captdir}/captions_brain.csv', sep='\t',header=None)
         c = model.get_learned_conditioning(captions.iloc[imgidx][0]).to('cuda')
+
+    #print(model.cond_stage_model.decode(c))
 
     # Generate image from Z (image) + C (semantics)
     base_count = 0
